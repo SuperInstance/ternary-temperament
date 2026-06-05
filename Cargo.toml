@@ -1,0 +1,7 @@
+[package]
+name = "ternary-temperament"
+version = "0.1.0"
+edition = "2021"
+description = "Musical temperament and tuning in ternary — intervals, chords, just intonation, and the mathematics of the triad"
+
+[dependencies]
