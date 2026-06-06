@@ -2,32 +2,89 @@
 
 Musical temperament and tuning in ternary — intervals, chords, just intonation, and the mathematics of the triad
 
-## Overview
+## Why This Matters
 
+Musical temperament and tuning in ternary — intervals, chords, just intonation, and the mathematics of the triad
 
+## The Five-Layer Stack
 
-## Stats
+This crate is part of the **Oxide Stack** — a distributed GPU runtime built on five layers:
 
-- **Tests**: 16
-- **LOC**: 246
-- **License**: Apache-2.0
+```
+┌─────────────────┐
+│  cudaclaw        │  Persistent GPU kernels, warp consensus, SmartCRDT
+├─────────────────┤
+│  cuda-oxide      │  Flux → MIR → Pliron → NVVM → PTX compiler
+├─────────────────┤
+│  flux-core       │  Bytecode VM + A2A agent protocol
+├─────────────────┤
+│  pincher         │  "Vector DB as runtime, LLM as compiler"
+├─────────────────┤
+│  open-parallel   │  Async runtime (tokio fork)
+└─────────────────┘
+```
 
-## Part of the Oxide Stack
+The key insight: **ternary values {-1, 0, +1} map directly to GPU compute**. They pack 16× denser than FP32, enable XNOR+popcount matmul, and conservation laws become compile-time checks.
 
-This crate is part of the [Flux→PTX](https://github.com/SuperInstance/cuda-oxide/blob/main/FLUX_TO_PTX.md) experimental suite, testing synergies between the five layers of the distributed GPU runtime:
+## Design
 
-1. **open-parallel** — async runtime (tokio fork)
-2. **pincher** — "Vector DB as runtime, LLM as compiler"
-3. **flux-core** — bytecode VM + A2A agent protocol
-4. **cuda-oxide** — Flux→MIR→Pliron→NVVM→PTX compiler
-5. **cudaclaw** — persistent GPU kernels, warp-level consensus, SmartCRDT
+Every value in this crate follows **ternary algebra** (Z₃):
+
+| Value | Meaning | GPU Analog |
+|-------|---------|------------|
+| +1 | Positive / Active / Healthy | Warp vote yes |
+| 0 | Neutral / Pending / Balanced | Warp vote abstain |
+| -1 | Negative / Failed / Overloaded | Warp vote no |
+
+This isn't arbitrary — ternary is the natural encoding for:
+1. **BitNet b1.58** (Microsoft) — ternary LLMs at 60% less power
+2. **GPU warp voting** — hardware ballot returns ternary consensus
+3. **Conservation laws** — {-1, 0, +1} preserves quantity
+
+## Key Types
+
+```rust
+pub struct Pitch
+pub fn new
+pub struct Interval
+pub fn new
+pub struct Chord
+pub fn new
+pub fn pitches
+pub fn major_triad
+pub fn minor_triad
+pub fn transpose
+pub fn invert
+pub fn resolve
+```
 
 ## Usage
 
+```toml
+[dependencies]
+ternary-temperament = "0.1.0"
+```
+
 ```rust
 use ternary_temperament::*;
-// See tests in src/lib.rs for examples
+// See src/lib.rs tests for complete working examples
 ```
+
+## Testing
+
+```bash
+git clone https://github.com/SuperInstance/ternary-temperament.git
+cd ternary-temperament
+cargo test    # 16 tests
+```
+
+## Stats
+
+| Metric | Value |
+|--------|-------|
+| Tests | 16 |
+| Lines of Rust | 247 |
+| Public API | 15 items |
 
 ## License
 
