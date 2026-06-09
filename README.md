@@ -1,77 +1,151 @@
 # ternary-temperament
 
-Tuning systems and harmonic temperament in ternary pitch space — chords, intervals, voice leading, and the circle of thirds for three-pitch-class music.
+**Tuning systems for ternary weights.**
 
-## Background
+In music, temperament determines how notes are tuned relative to each other. Equal
+temperament divides the octave into equal steps; just intonation uses pure mathematical
+ratios; meantone is a historical compromise. This crate brings those concepts to ternary
+(−1, 0, +1) weight systems, offering different "tunings" for how trit values map to
+real-valued weights.
 
-Temperament — the art of dividing the octave into usable intervals — has shaped Western music for centuries. From Pythagorean just intonation to equal temperament, each system represents a different compromise between mathematical purity and musical practicality. Meantone temperament flattened fifths to sweeten thirds. Well temperament gave each key its own color. Equal temperament made all keys identical.
+## Overview
 
-Ternary temperament takes this to its logical extreme: the octave is divided into exactly three pitch classes. There is no "circle of fifths" because there are only three intervals: unison (0), third (1), and tritone/fifth (2). The entire harmonic universe exists within a single augmented triad.
+A ternary system uses three values: `Neg` (−1), `Zero` (0), and `Pos` (+1). When mapping
+these abstract values to concrete weights (e.g., for neural network connections, agent
+parameters, or resource allocations), the choice of mapping matters. This crate provides
+several "temperaments" — systematic approaches to tuning the mapping from trits to weights.
 
-This crate implements chord construction, inversion, transposition, and voice leading in this minimal pitch space — and discovers that even with only three pitch classes, the fundamental operations of tonal harmony remain meaningful.
+## Tuning Systems
 
-## How It Works
+### EqualTemperament
 
-### Pitch and Interval
+The standard tuning: equal spacing between all trit values. Maps `{Neg, Zero, Pos}` to
+equally spaced values in a configurable range.
 
-Pitches are ternary pitch classes: 0, 1, or 2. Intervals are computed modulo 3, yielding exactly three possibilities:
+```
+Default: Neg → -1.0, Zero → 0.0, Pos → +1.0
+Custom:  Neg → 0.0,  Zero → 0.5, Pos → +1.0  (range [0, 1])
+```
 
-| Interval | Mod-3 Value | Traditional Analogue |
-|----------|-------------|----------------------|
-| Unison   | 0           | Unison / octave      |
-| Third    | 1           | Major/minor third    |
-| Fifth    | 2           | Tritone / diminished fifth |
+**When to use**: When you need balanced, predictable behavior. The default choice for
+most applications.
 
-### Chord Construction
+### JustIntonation
 
-Chords are built from a root pitch and a vector of intervals. The crate provides:
+Uses pure mathematical ratios derived from small integers. Theoretically "perfect" but
+not equally spaced — just like in music, where just intonation produces pure intervals
+but some keys sound better than others.
 
-- **`major_triad(root)`** — intervals [0, 1, 1], the "bright" triad
-- **`minor_triad(root)`** — intervals [0, 1, 2], the "dark" triad
-- **Transpose** — shift root by a ternary step, wrapping mod 3
-- **Invert** — rotate intervals to move bottom notes to top (or vice versa)
+```
+Standard: Neg → 0.8, Zero → 1.0, Pos → 1.25  (ratios 4/5, 1/1, 5/4)
+Pythagorean: Neg → 8/9, Zero → 1.0, Pos → 9/8
+```
 
-The distinction between major and minor is subtle but real in ternary: the major triad [0, 1, 1] emphasizes the "third" interval, while the minor triad [0, 1, 2] includes the "tritone" quality.
+**When to use**: When mathematical purity matters more than uniformity. Good for
+systems where the ratios between weights are more important than their absolute values.
 
-### Voice Leading
+### Meantone
 
-`voice_lead(from, to)` computes the minimal mapping between two chords — pairing pitches position-by-position to show how each voice moves. In ternary, voice leading distances are always small (at most 2 steps), reflecting the compressed pitch space.
+A compromise between equal and just intonation, parameterized by alpha ∈ [0.0, 1.0]:
 
-### Circle of Thirds
+- `alpha = 0.0` → Equal temperament
+- `alpha = 1.0` → Just intonation
+- `alpha = 0.25` → Quarter-comma meantone (classic historical tuning)
 
-The ternary equivalent of the circle of fifths: 0 → 1 → 2 → 0. In traditional theory, the circle of fifths connects all 12 keys. In ternary, the "circle of thirds" cycles through all three pitch classes in a single step — every key is adjacent to every other key.
+**When to use**: When you want some of the purity of just intonation but need smoother
+transitions. The alpha parameter lets you dial in the right balance.
 
-### Temperament Error
+### Microtonal
 
-`temperament_error(just, tempered)` measures the discrepancy between a target interval and a tempered approximation, clamped to ternary range {-1, 0, +1}. In a 3-pitch-class system, temperament error is always dramatic: you're either exactly right (0) or off by at least one third (±1).
+Subdivides each trit step into finer divisions for sub-trit precision. With `n` divisions,
+you get `2n + 1` possible micro-trit values instead of just 3.
 
-## Experimental Results
+```
+divisions=4: 9 values from -1.0 to +1.0 in steps of 0.25
+divisions=2: 5 values from -1.0 to +1.0 in steps of 0.5
+```
 
-- **Only two distinct triads exist.** Major and minor are the only non-degenerate three-note chords in ternary pitch space. Every other combination either duplicates a pitch or reduces to one of these two.
-- **Transposition wraps in 3 steps.** Transposing any chord three times returns to the original — the entire key space cycles in three steps, compared to 12 in chromatic music.
-- **Inversion preserves chord quality.** Unlike traditional harmony where inversions change the bass note and thus the chord character, ternary inversion merely rotates which voice has the root. All inversions are equivalent.
-- **Temperament error is binary.** With only three pitch classes, any "out-of-tune" interval is off by exactly one step. There is no such thing as a "slightly" out-of-tune ternary interval.
-- **Voice leading is always smooth.** The maximum voice leading distance between any two chords is 2 steps (one voice moves by a tritone). Most transitions are 0 or 1 step.
+**When to use**: When you need fine-grained control beyond the standard three values.
+Useful for continuous control systems or gradual transitions.
 
-## Impact
+## Comparison & Conversion
 
-Ternary temperament reveals that the essential operations of tonal harmony — chord construction, transposition, inversion, voice leading — are not dependent on the richness of the pitch space. They work with as few as three pitch classes, though the resulting musical vocabulary is severely constrained.
+### TuningComparison
 
-The crate provides a formal demonstration that temperament is a relative concept: the "errors" in any tuning system are meaningful only in relation to the number of available pitch classes.
+Compare all tuning systems side-by-side on the same ternary sequence:
 
-## Use Cases
+```rust
+let comp = TuningComparison::compare(&seq);
+let max_dev = comp.max_deviation();
+let mad = comp.equal_vs_just_mad();
+```
 
-1. **Microtonal music research** — Explore the minimum viable tuning system for functional harmony. Ternary temperament is the simplest non-trivial system.
-2. **Generative music** — Build chord progressions and voice leading algorithms with mathematically guaranteed minimal distance between all chords.
-3. **Music theory education** — Demonstrate chord construction, transposition, and inversion concepts using a pitch space small enough to enumerate completely.
-4. **Algorithmic composition constraints** — Use ternary temperament as a constraint system where every valid progression can be listed exhaustively.
+### TemperamentAdapter
 
-## Open Questions
+Convert between tuning systems while preserving sequence structure (trit identity):
 
-1. **Extended ternary harmony.** Can seventh chords, ninth chords, or extended harmony be meaningfully defined in a three-pitch-class system, or do they collapse into triads?
-2. **Functional harmony.** Does tonic/dominant/subdominant function exist in ternary? The three pitch classes map naturally to these functions, but does a I-IV-V progression make sense when IV and V are adjacent?
-3. **Just intonation for ternary.** If ternary intervals were tuned to just ratios rather than equal steps, would the 1:5:3 ratio (a "just" ternary triad) produce perceptibly different sonorities?
+```rust
+let equal_weights = eq.tune_sequence(&seq);
+let just_weights = TemperamentAdapter::equal_to_just(&equal_weights);
+assert!(TemperamentAdapter::verify_structure_preserved(&equal_weights, &just_weights));
+```
 
-## Connection to Oxide Stack
+## Usage
 
-`ternary-temperament` provides the harmonic foundation for `ternary-music` (which maps ternary chords to 12-tone equivalents), `ternary-counterpoint` (which uses interval classification for consonance/dissonance rules), and `ternary-color` (which applies analogous classification principles to visual temperature). The circle of thirds conceptually mirrors `ternary-compass`'s navigational bearings.
+```rust
+use ternary_temperament::*;
+
+// Equal temperament (standard)
+let eq = EqualTemperament::standard();
+let w = eq.tune(Trit::Pos);
+assert_eq!(w.value, 1.0);
+
+// Just intonation
+let just = JustIntonation::standard();
+let w = just.tune(Trit::Pos);
+assert_eq!(w.value, 1.25);
+
+// Meantone compromise
+let mt = Meantone::new(0.5); // halfway between equal and just
+let w = mt.tune(Trit::Pos);
+
+// Microtonal (fine-grained)
+let micro = Microtonal::new(4);
+let w = micro.tune_micro(2); // two sub-steps above center
+assert_eq!(w.value, 0.5);
+
+// Compare systems
+let comp = TuningComparison::compare(&[Trit::Neg, Trit::Zero, Trit::Pos]);
+println!("Max deviation: {}", comp.max_deviation());
+
+// Convert between systems
+let weights = eq.tune_sequence(&seq);
+let converted = TemperamentAdapter::convert(&weights, TuningSystem::Just);
+```
+
+## Design Philosophy
+
+The temperament metaphor is surprisingly apt for ternary weight systems:
+
+- **Equal temperament** = democratic, no value is privileged
+- **Just intonation** = mathematically elegant, but with uneven gaps
+- **Meantone** = practical compromise for real-world use
+- **Microtonal** = when three values aren't enough
+
+Just as musicians choose temperaments based on the music they're playing, agent
+designers can choose tunings based on the behavior they want. A conversational agent
+might prefer equal temperament for balanced responses, while a creative agent might
+benefit from the asymmetric ratios of just intonation.
+
+## Testing
+
+```bash
+cargo test
+```
+
+All 38 tests pass, covering equal temperament spacing, just intonation ratios, meantone
+interpolation, microtonal subdivisions, comparison metrics, and adapter correctness.
+
+## License
+
+MIT
