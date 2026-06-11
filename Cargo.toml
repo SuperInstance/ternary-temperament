@@ -2,6 +2,7 @@
 repository = "https://github.com/SuperInstance/ternary-temperament"
 name = "ternary-temperament"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
 edition = "2021"
 description = "Musical temperament and tuning in ternary — intervals, chords, just intonation, and the mathematics of the triad"
 
